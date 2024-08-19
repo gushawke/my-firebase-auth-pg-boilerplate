@@ -1,28 +1,25 @@
-// pages/api/auth/signup.ts
-import type { NextApiRequest, NextApiResponse } from 'next';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../../../lib/firebase';
-import pool from '../../../lib/db';
+// Example: Google Sign-In with Popup
+import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ message: 'Method not allowed' });
-  }
+const auth = getAuth();
+const provider = new GoogleAuthProvider();
 
-  const { email, password } = req.body;
-
-  try {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    const user = userCredential.user;
-
-    // Insert user into PostgreSQL
-    const client = await pool.connect();
-    const queryText = 'INSERT INTO users(id, email) VALUES($1, $2)';
-    await client.query(queryText, [user.uid, email]);
-    client.release();
-
-    res.status(200).json({ userId: user.uid });
-  } catch (error) {
-    res.status(400).json({ error: (error as Error).message });
-  }
+function signInWithGoogle() {
+  signInWithPopup(auth, provider)
+    .then((result) => {
+      // User is signed in
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      const token = credential?.accessToken;
+      const user = result.user;
+      console.log("User signed in:", user);
+      // Handle signed-in user information
+    })
+    .catch((error) => {
+      // Handle Errors here.
+      const errorCode = error.code;
+      const errorMessage = error.message;
+      const email = error.customData.email;
+      const credential = GoogleAuthProvider.credentialFromError(error);
+      console.error("Error during sign-in:", errorCode, errorMessage);
+    });
 }
